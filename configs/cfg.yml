@@ -1,0 +1,84 @@
+Global:
+  epoch: 20
+  batch_size: &batch_size 2
+  iter_eval: 1000
+  epoch_save: 1
+  checkpoint: checkpoints/khmer_printed/20240511
+  log_path: "logs/khmer_printed/20240511.log"
+  
+  
+Pretrain:
+  resume: True
+  checkpoint_path: 'checkpoints/khmer_printed/20240510/iter_acc/iter.pt'
+
+
+Architecture:
+  name: BaseModel
+  Backbone:
+    name: ResNetTypeI
+    layer_params: [2, 2, 2, 2]
+    out_channel: &feat_channels 512
+
+  Neck:
+    name: Img2Seq
+    in_channels: *feat_channels
+
+  Head:
+    name: CTCHead
+    in_channels: &ctc_in_channels 128
+    num_classes: &num_classes 244
+
+  
+Optimizer:
+  name: Adam
+  lr: 0.0001
+  Scheduler:
+    name: CosinWarmUp
+    d_model: 512
+    warmup_steps: 12000
+
+Criterion:
+  name: CTCLoss
+
+
+PostProcess: None
+
+
+Data:
+  Train:
+    name: LMDBDataset
+    data_dir: ['DATASET_LMDB/train']
+    batch_size: *batch_size
+    Transforms:
+    - DecodeBufferImage:
+        name: DecodeBufferImage
+    - BaseAug:
+        name: BaseAug
+        aug_thresh: 0.4
+    - ResizeWithPad:
+        name: ResizeWithPad
+        shape: &shape [42, 880]
+    - NormalizeImgAndTranpose:
+        name: NormalizeImgAndTranpose
+
+    Keepkeys: ['img' ,'text']
+
+  Valid:
+    name: LMDBDataset
+    data_dir: ['DATASET_LMDB/val']
+    batch_size: *batch_size
+    Transforms:
+    - DecodeBufferImage:
+        name: DecodeBufferImage
+    - BaseAug:
+        name: BaseAug
+        aug_thresh: 0.4
+    - ResizeWithPad:
+        name: ResizeWithPad
+        shape: *shape
+    - NormalizeImgAndTranpose:
+        name: NormalizeImgAndTranpose
+    
+    Keepkeys: ['img', 'text']
+
+
